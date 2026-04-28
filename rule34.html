@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ПЕТЯ СЛИЛ ТВОИ ДАННЫЕ</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap');
+
+        :root {
+            --accent: #00ff41;
+            --danger: #ff0033;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background: #0a0a0a;
+            color: #00ff41;
+            font-family: 'Inter', system-ui, sans-serif;
+            min-height: 100vh;
+            overflow-x: hidden;
+            background-image: 
+                radial-gradient(circle at 50% 20%, rgba(0, 255, 65, 0.08) 0%, transparent 50%),
+                linear-gradient(180deg, #0a0a0a 0%, #050505 100%);
+        }
+
+        .scanline {
+            position: fixed;
+            inset: 0;
+            background: linear-gradient(to bottom, transparent 50%, rgba(0, 255, 65, 0.06) 50%);
+            background-size: 100% 4px;
+            pointer-events: none;
+            animation: scan 6s linear infinite;
+            z-index: 1;
+        }
+
+        .container {
+            position: relative;
+            z-index: 2;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .glitch {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: clamp(2.4rem, 8vw, 5rem);
+            font-weight: 700;
+            color: var(--danger);
+            text-shadow: 0 0 15px #ff0033, 0 0 40px #ff0033;
+            animation: glitch 1.3s infinite;
+            letter-spacing: -3px;
+        }
+
+        .subtitle {
+            font-size: 1.4rem;
+            color: #00ff41;
+            margin-top: 0.5rem;
+            opacity: 0.9;
+        }
+
+        .card {
+            background: rgba(15, 15, 15, 0.96);
+            border: 1px solid var(--accent);
+            border-radius: 20px;
+            padding: 2.2rem;
+            box-shadow: 0 0 50px rgba(0, 255, 65, 0.2);
+            backdrop-filter: blur(10px);
+        }
+
+        .data-title {
+            font-size: 1.15rem;
+            color: #ff0033;
+            margin-bottom: 1.2rem;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            font-weight: 600;
+        }
+
+        .data {
+            background: #111;
+            border-radius: 14px;
+            padding: 1.8rem;
+            font-size: 1.1rem;
+            line-height: 2.1;
+            border: 1px solid #222;
+        }
+
+        .data span {
+            color: #ff00ff;
+            font-weight: 500;
+        }
+
+        .btn {
+            margin-top: 2.8rem;
+            padding: 18px 52px;
+            font-size: 1.3rem;
+            font-weight: 600;
+            background: var(--danger);
+            color: white;
+            border: none;
+            border-radius: 14px;
+            cursor: pointer;
+            box-shadow: 0 10px 30px rgba(255, 0, 51, 0.5);
+            transition: all 0.4s ease;
+            width: 100%;
+            max-width: 460px;
+        }
+
+        .btn:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 45px rgba(255, 0, 51, 0.7);
+        }
+
+        .footer-text {
+            margin-top: 3rem;
+            color: #555;
+            font-size: 1rem;
+        }
+
+        @keyframes glitch {
+            0%, 100% { transform: translate(0); }
+            20% { transform: translate(-4px, 4px); }
+            40% { transform: translate(4px, -4px); }
+            60% { transform: translate(-2px, 3px); }
+            80% { transform: translate(3px, -3px); }
+        }
+
+        @media (max-width: 640px) {
+            .card { padding: 1.5rem; }
+            .data { font-size: 1.05rem; padding: 1.4rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="scanline"></div>
+
+    <div class="container">
+        <div class="header">
+            <h1 class="glitch">ПЕТЯ ВЗЛОМАЛ ТЕБЯ</h1>
+            <p class="subtitle">Главный хакер Района 919</p>
+        </div>
+
+        <div class="card">
+            <div class="data-title">СЛИВ ДАННЫХ ЗАВЕРШЁН</div>
+            <div class="data" id="data-container">
+                <strong>Подключение к твоему устройству...</strong>
+            </div>
+        </div>
+
+        <button class="btn" onclick="window.location.href='/'">
+            ← ВЕРНУТЬСЯ В РАЙОН 919
+        </button>
+
+        <div class="footer-text">
+            Петя Носогрызов уже знает о тебе больше чем твоя мама
+        </div>
+    </div>
+
+    <script>
+        const container = document.getElementById('data-container');
+
+        fetch('https://ipapi.co/json/')
+            .then(res => res.json())
+            .then(data => {
+                container.innerHTML = `
+                    <strong>IP-адрес:</strong> <span>${data.ip || 'Неизвестно'}</span><br>
+                    <strong>Город:</strong> <span>${data.city || 'Неизвестно'}</span><br>
+                    <strong>Регион / Область:</strong> <span>${data.region || '—'}</span><br>
+                    <strong>Страна:</strong> <span>${data.country_name || 'Неизвестно'} (${data.country_code || '—'})</span><br>
+                    <strong>Валюта:</strong> <span>${data.currency || '—'}</span><br>
+                    <strong>Провайдер:</strong> <span>${data.org || 'Неизвестно'}</span><br>
+                    <strong>ASN:</strong> <span>${data.asn || '—'}</span><br>
+                    <strong>Часовой пояс:</strong> <span>${data.timezone || '—'}</span><br>
+                    <strong>Широта / Долгота:</strong> <span>${data.latitude || '—'} / ${data.longitude || '—'}</span><br>
+                    <strong>Почтовый индекс:</strong> <span>${data.postal || '—'}</span><br>
+                    <strong>Язык:</strong> <span>${data.languages || '—'}</span>
+                `;
+            })
+            .catch(err => {
+                container.innerHTML = `
+                    Не удалось получить полные данные.<br>
+                    <span style="color:#ff00ff;">Но поверь, я вижу тебя гораздо лучше, чем ты думаешь, щенок.</span>
+                `;
+            });
+    </script>
+</body>
+</html>
