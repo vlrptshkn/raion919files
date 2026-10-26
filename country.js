@@ -1,4 +1,4 @@
-<script>
+
 (function() {
     
     var flagEl = document.createElement('div');
@@ -75,4 +75,3 @@
                 });
         });
 })();
-</script>
