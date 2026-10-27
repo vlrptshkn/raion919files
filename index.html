@@ -53,6 +53,11 @@
   var flagEl = document.getElementById('flag');
   var regionEl = document.getElementById('region');
 
+  var regionText = '';
+  var timeZone = 'UTC';   
+  var showingTime = false;
+  var timerId = null;
+
   function codeToFlag(code) {
     if (!code || code.length !== 2) return '';
     code = code.toUpperCase();
@@ -63,15 +68,51 @@
     );
   }
 
-  function show(code, region) {
+  function getTime() {
+    try {
+      var fmt = new Intl.DateTimeFormat('ru-RU', {
+        timeZone: timeZone,
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+      });
+      return fmt.format(new Date());
+    } catch (e) {
+      
+      var d = new Date();
+      var h = String(d.getHours()).padStart(2, '0');
+      var m = String(d.getMinutes()).padStart(2, '0');
+      return h + ':' + m;
+    }
+  }
+
+  function render() {
+    regionEl.textContent = showingTime ? getTime() : regionText;
+  }
+
+  function startToggle() {
+    if (timerId) clearInterval(timerId);
+    timerId = setInterval(function() {
+      showingTime = !showingTime;
+      render();
+    }, 5000);
+  }
+
+  function show(code, region, tz) {
     var f = codeToFlag(code);
     if (!f) return;
+
     flagEl.textContent = f;
     flagEl.style.opacity = '1';
-    if (region) {
-      regionEl.textContent = region;
-      regionEl.style.opacity = '1';
-    }
+
+    regionText = region || '';
+    timeZone = tz || 'UTC';
+
+    showingTime = false;
+    render();
+    regionEl.style.opacity = '1';
+
+    startToggle();
   }
 
   fetch('https://ipapi.co/json/')
@@ -81,14 +122,14 @@
     })
     .then(function(d) {
       var reg = d.region || d.city || '';
-      show(d.country_code, reg);
+      show(d.country_code, reg, d.timezone);
     })
     .catch(function() {
       fetch('https://ipwho.is/')
         .then(function(r) { return r.json(); })
         .then(function(d) {
           var reg = d.region || d.city || '';
-          show(d.country_code, reg);
+          show(d.country_code, reg, d.timezone && d.timezone.id);
         })
         .catch(function() {});
     });
