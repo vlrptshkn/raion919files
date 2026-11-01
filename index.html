@@ -18,93 +18,27 @@
     height: 100vh;
     font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
   }
-  #widget {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 1px;
-    padding: 0;
-    max-width: 100%;
-    box-sizing: border-box;
-  }
-  #flag {
-    font-size: 20px;
+  #line {
+    font-size: 14px;
     line-height: 1;
+    color: #ffffff;
+    text-shadow: 0 0 2px #000, 0 1px 2px #000;
+    white-space: nowrap;
     user-select: none;
     opacity: 0;
     transition: opacity 0.3s;
   }
-  #region-wrap {
-    width: 100%;
-    overflow: hidden;
-    white-space: nowrap;
-    opacity: 0;
-    transition: opacity 0.25s ease;
-  }
-  #region-wrap.fade {
-    opacity: 0;
-  }
-  #region {
-    display: inline-block;
-    font-size: 8px;
-    line-height: 1.2;
-    color: #ffffff;
-    text-shadow: 0 0 2px #000, 0 1px 2px #000;
-    user-select: none;
-    padding: 0 2px;
-    white-space: nowrap;
-  }
-  #region.scroll {
-    animation: region-scroll var(--scroll-dur, 6s) linear infinite;
-  }
-  @keyframes region-scroll {
-    0%   { transform: translateX(0); }
-    20%  { transform: translateX(0); }
-    80%  { transform: translateX(var(--scroll-dist, 0)); }
-    100% { transform: translateX(var(--scroll-dist, 0)); }
-  }
-  #net-dot {
-    position: absolute;
-    top: -4px;
-    right: -4px;
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: #22c55e;
-    box-shadow: 0 0 4px rgba(34, 197, 94, 0.8);
-    transition: background 0.3s, box-shadow 0.3s;
-  }
-  #net-dot.offline {
-    background: #ef4444;
-    box-shadow: 0 0 4px rgba(239, 68, 68, 0.8);
-  }
 </style>
 </head>
 <body>
-  <div id="widget">
-    <div id="net-dot" title="Сеть в порядке"></div>
-    <span id="flag"></span>
-    <div id="region-wrap">
-      <span id="region"></span>
-    </div>
-  </div>
+  <span id="line"></span>
 
 <script>
 (function() {
-  var flagEl = document.getElementById('flag');
-  var regionEl = document.getElementById('region');
-  var regionWrap = document.getElementById('region-wrap');
-  var dotEl = document.getElementById('net-dot');
-
-  var CACHE_KEY = 'visitor_country_cache_v1';
-  var CACHE_TTL = 24 * 60 * 60 * 1000;
-
-  var regionText = '';
-  var timeZone = 'UTC';
-  var showingTime = false;
-  var timerId = null;
-  var fadeTimer = null;
+  var el = document.getElementById('line');
+  var region = '';
+  var tz = 'UTC';
+  var showTime = false;
 
   function codeToFlag(code) {
     if (!code || code.length !== 2) return '';
@@ -116,10 +50,10 @@
     );
   }
 
-  function getTime() {
+  function timeStr() {
     try {
       var fmt = new Intl.DateTimeFormat('ru-RU', {
-        timeZone: timeZone,
+        timeZone: tz,
         hour: '2-digit',
         minute: '2-digit',
         hour12: false
@@ -132,181 +66,39 @@
     }
   }
 
-  function updateScroll() {
-    regionEl.classList.remove('scroll');
-    regionEl.style.removeProperty('--scroll-dist');
-    regionEl.style.removeProperty('--scroll-dur');
-
-    requestAnimationFrame(function() {
-      var wrapW = regionWrap.clientWidth;
-      var textW = regionEl.scrollWidth;
-      if (textW > wrapW + 1) {
-        var dist = textW - wrapW;
-        regionEl.style.setProperty('--scroll-dist', '-' + dist + 'px');
-        var dur = Math.max(4, Math.min(14, dist / 20));
-        regionEl.style.setProperty('--scroll-dur', dur + 's');
-        regionEl.classList.add('scroll');
-      }
-    });
-  }
-
-  function setRegionText(newText) {
-    if (fadeTimer) clearTimeout(fadeTimer);
-    regionWrap.classList.add('fade');
-    fadeTimer = setTimeout(function() {
-      regionEl.textContent = newText;
-      regionWrap.classList.remove('fade');
-      updateScroll();
-    }, 220);
-  }
-
   function render() {
-    setRegionText(showingTime ? getTime() : regionText);
+    el.textContent = flag + (showTime ? timeStr() : region);
   }
 
-  function startToggle() {
-    if (timerId) clearInterval(timerId);
-    timerId = setInterval(function() {
-      showingTime = !showingTime;
-      render();
-    }, 5000);
+  var flag = '';
+
+  function setData(code, reg, zone) {
+    flag = codeToFlag(code);
+    region = reg || '';
+    tz = zone || 'UTC';
+    showTime = false;
+    render();
+    el.style.opacity = '1';
   }
 
-  function readCache() {
-    try {
-      var raw = localStorage.getItem(CACHE_KEY);
-      if (!raw) return null;
-      var data = JSON.parse(raw);
-      if (!data || !data.ts || !data.code) return null;
-      if (Date.now() - data.ts > CACHE_TTL) return null;
-      return data;
-    } catch (e) { return null; }
-  }
+  setInterval(function() {
+    showTime = !showTime;
+    render();
+  }, 5000);
 
-  function writeCache(code, region, tz) {
-    try {
-      localStorage.setItem(CACHE_KEY, JSON.stringify({
-        code: code,
-        region: region,
-        tz: tz || 'UTC',
-        ts: Date.now()
-      }));
-    } catch (e) {}
-  }
-
-  function show(code, region, tz) {
-    var f = codeToFlag(code);
-    if (!f) return;
-
-    var changed = false;
-    if (flagEl.textContent && flagEl.textContent !== f) changed = true;
-    if (regionText !== (region || '')) changed = true;
-    if (timeZone !== (tz || 'UTC')) changed = true;
-
-    flagEl.textContent = f;
-    flagEl.style.opacity = '1';
-
-    regionText = region || '';
-    timeZone = tz || 'UTC';
-    showingTime = false;
-
-    if (changed || !regionEl.textContent) {
-      render();
-    } else {
-      regionEl.textContent = regionText || '';
-      updateScroll();
-    }
-    regionWrap.style.opacity = '1';
-
-    if (!timerId) startToggle();
-  }
-
-  function updateNet(isOnline) {
-    dotEl.classList.toggle('offline', !isOnline);
-    dotEl.title = isOnline ? 'Сеть в порядке' : 'Нет сети';
-  }
-  window.addEventListener('online', function() { updateNet(true); });
-  window.addEventListener('offline', function() { updateNet(false); });
-  updateNet(navigator.onLine);
-
-  function fetchWithTimeout(url, ms) {
-    var controller = new AbortController();
-    var t = setTimeout(function() { controller.abort(); }, ms);
-    return fetch(url, { signal: controller.signal }).finally(function() {
-      clearTimeout(t);
+  fetch('https://ipapi.co/json/')
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      setData(d.country_code, d.region || d.city, d.timezone);
+    })
+    .catch(function() {
+      fetch('https://ipwho.is/')
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+          setData(d.country_code, d.region || d.city, d.timezone && d.timezone.id);
+        })
+        .catch(function() {});
     });
-  }
-
-  function parseIpapi(d) {
-    return {
-      code: d.country_code,
-      region: d.region || d.city || '',
-      tz: d.timezone || 'UTC'
-    };
-  }
-  function parseIpwho(d) {
-    return {
-      code: d.country_code,
-      region: d.region || d.city || '',
-      tz: (d.timezone && d.timezone.id) || 'UTC'
-    };
-  }
-
-  var resizeT = null;
-  window.addEventListener('resize', function() {
-    if (resizeT) clearTimeout(resizeT);
-    resizeT = setTimeout(updateScroll, 150);
-  });
-
-  var cached = readCache();
-
-  if (cached) {
-    show(cached.code, cached.region, cached.tz);
-
-    fetchWithTimeout('https://ipapi.co/json/', 3500)
-      .then(function(r) { if (!r.ok) throw 0; return r.json(); })
-      .then(function(d) {
-        var p = parseIpapi(d);
-        if (p.code) {
-          writeCache(p.code, p.region, p.tz);
-          show(p.code, p.region, p.tz);
-        }
-      })
-      .catch(function() {
-        fetchWithTimeout('https://ipwho.is/', 3500)
-          .then(function(r) { return r.json(); })
-          .then(function(d) {
-            var p = parseIpwho(d);
-            if (p.code) {
-              writeCache(p.code, p.region, p.tz);
-              show(p.code, p.region, p.tz);
-            }
-          })
-          .catch(function() {});
-      });
-  } else {
-    fetchWithTimeout('https://ipapi.co/json/', 3500)
-      .then(function(r) { if (!r.ok) throw 0; return r.json(); })
-      .then(function(d) {
-        var p = parseIpapi(d);
-        if (p.code) {
-          writeCache(p.code, p.region, p.tz);
-          show(p.code, p.region, p.tz);
-        }
-      })
-      .catch(function() {
-        fetchWithTimeout('https://ipwho.is/', 3500)
-          .then(function(r) { return r.json(); })
-          .then(function(d) {
-            var p = parseIpwho(d);
-            if (p.code) {
-              writeCache(p.code, p.region, p.tz);
-              show(p.code, p.region, p.tz);
-            }
-          })
-          .catch(function() {});
-      });
-  }
 })();
 </script>
 </body>
