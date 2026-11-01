@@ -23,47 +23,51 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 2px;
-    padding: 4px 8px 5px;
-    border-radius: 8px;
-    background: rgba(0, 0, 0, 0.38);
-    backdrop-filter: blur(3px);
-    -webkit-backdrop-filter: blur(3px);
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+    gap: 1px;
+    padding: 0;
     max-width: 100%;
     box-sizing: border-box;
-    transition: background 0.3s;
   }
   #flag {
-    font-size: 16px;
+    font-size: 20px;
     line-height: 1;
     user-select: none;
     opacity: 0;
     transition: opacity 0.3s;
   }
+  #region-wrap {
+    width: 100%;
+    overflow: hidden;
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity 0.25s ease;
+  }
+  #region-wrap.fade {
+    opacity: 0;
+  }
   #region {
-    font-size: 6px;
+    display: inline-block;
+    font-size: 8px;
     line-height: 1.2;
     color: #ffffff;
     text-shadow: 0 0 2px #000, 0 1px 2px #000;
-    text-align: center;
-    white-space: normal;
-    word-break: break-word;
-    overflow-wrap: anywhere;
-    hyphens: auto;
-    max-width: 100%;
-    opacity: 0;
     user-select: none;
     padding: 0 2px;
-    transition: opacity 0.25s ease;
+    white-space: nowrap;
   }
-  #region.fade {
-    opacity: 0;
+  #region.scroll {
+    animation: region-scroll var(--scroll-dur, 6s) linear infinite;
+  }
+  @keyframes region-scroll {
+    0%   { transform: translateX(0); }
+    20%  { transform: translateX(0); }
+    80%  { transform: translateX(var(--scroll-dist, 0)); }
+    100% { transform: translateX(var(--scroll-dist, 0)); }
   }
   #net-dot {
     position: absolute;
-    top: 2px;
-    right: 2px;
+    top: -4px;
+    right: -4px;
     width: 6px;
     height: 6px;
     border-radius: 50%;
@@ -81,17 +85,20 @@
   <div id="widget">
     <div id="net-dot" title="Сеть в порядке"></div>
     <span id="flag"></span>
-    <span id="region"></span>
+    <div id="region-wrap">
+      <span id="region"></span>
+    </div>
   </div>
 
 <script>
 (function() {
   var flagEl = document.getElementById('flag');
   var regionEl = document.getElementById('region');
+  var regionWrap = document.getElementById('region-wrap');
   var dotEl = document.getElementById('net-dot');
 
   var CACHE_KEY = 'visitor_country_cache_v1';
-  var CACHE_TTL = 24 * 60 * 60 * 1000; 
+  var CACHE_TTL = 24 * 60 * 60 * 1000;
 
   var regionText = '';
   var timeZone = 'UTC';
@@ -108,7 +115,7 @@
       base + (code.charCodeAt(1) - 65)
     );
   }
-  
+
   function getTime() {
     try {
       var fmt = new Intl.DateTimeFormat('ru-RU', {
@@ -125,13 +132,32 @@
     }
   }
 
+  function updateScroll() {
+    regionEl.classList.remove('scroll');
+    regionEl.style.removeProperty('--scroll-dist');
+    regionEl.style.removeProperty('--scroll-dur');
+
+    requestAnimationFrame(function() {
+      var wrapW = regionWrap.clientWidth;
+      var textW = regionEl.scrollWidth;
+      if (textW > wrapW + 1) {
+        var dist = textW - wrapW;
+        regionEl.style.setProperty('--scroll-dist', '-' + dist + 'px');
+        var dur = Math.max(4, Math.min(14, dist / 20));
+        regionEl.style.setProperty('--scroll-dur', dur + 's');
+        regionEl.classList.add('scroll');
+      }
+    });
+  }
+
   function setRegionText(newText) {
     if (fadeTimer) clearTimeout(fadeTimer);
-    regionEl.classList.add('fade');           
+    regionWrap.classList.add('fade');
     fadeTimer = setTimeout(function() {
       regionEl.textContent = newText;
-      regionEl.classList.remove('fade');     
-    }, 220);                                  
+      regionWrap.classList.remove('fade');
+      updateScroll();
+    }, 220);
   }
 
   function render() {
@@ -173,16 +199,9 @@
     if (!f) return;
 
     var changed = false;
-
-    if (flagEl.textContent && flagEl.textContent !== f) {
-      changed = true;
-    }
-    if (regionText !== (region || '')) {
-      changed = true;
-    }
-    if (timeZone !== (tz || 'UTC')) {
-      changed = true;
-    }
+    if (flagEl.textContent && flagEl.textContent !== f) changed = true;
+    if (regionText !== (region || '')) changed = true;
+    if (timeZone !== (tz || 'UTC')) changed = true;
 
     flagEl.textContent = f;
     flagEl.style.opacity = '1';
@@ -191,14 +210,13 @@
     timeZone = tz || 'UTC';
     showingTime = false;
 
-    if (changed) {
-      render();
-    } else if (!regionEl.textContent) {
+    if (changed || !regionEl.textContent) {
       render();
     } else {
       regionEl.textContent = regionText || '';
+      updateScroll();
     }
-    regionEl.style.opacity = '1';
+    regionWrap.style.opacity = '1';
 
     if (!timerId) startToggle();
   }
@@ -233,19 +251,25 @@
       tz: (d.timezone && d.timezone.id) || 'UTC'
     };
   }
-  
+
+  var resizeT = null;
+  window.addEventListener('resize', function() {
+    if (resizeT) clearTimeout(resizeT);
+    resizeT = setTimeout(updateScroll, 150);
+  });
+
   var cached = readCache();
 
   if (cached) {
     show(cached.code, cached.region, cached.tz);
-    
+
     fetchWithTimeout('https://ipapi.co/json/', 3500)
       .then(function(r) { if (!r.ok) throw 0; return r.json(); })
       .then(function(d) {
         var p = parseIpapi(d);
         if (p.code) {
           writeCache(p.code, p.region, p.tz);
-          show(p.code, p.region, p.tz);     
+          show(p.code, p.region, p.tz);
         }
       })
       .catch(function() {
