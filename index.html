@@ -2,137 +2,191 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Флаг посетителя</title>
+<link rel="preconnect" href="https://api64.ipify.org">
 <style>
-  html, body {
-    margin: 0;
-    padding: 0;
-    background: transparent;
-    overflow: hidden;
+  html, body { margin: 0; height: 100%; background: transparent; overflow: hidden }
+  body { display: grid; place-items: center; font: 600 8.5px/1 -apple-system, "Segoe UI", Roboto, Arial, sans-serif; user-select: none }
+
+  #w {
+    position: relative; display: flex; flex-direction: column; align-items: center; gap: 3px;
+    max-width: calc(100% - 4px); box-sizing: border-box; padding: 4px 8px 4px;
+    border-radius: 10px; background: rgba(15, 23, 42, .66);
+    border: 1px solid rgba(255, 255, 255, .16); box-shadow: 0 2px 8px rgba(0, 0, 0, .35);
+    opacity: 0; transform: scale(.9); transition: opacity .3s, transform .3s;
   }
-  body {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    width: 100vw;
-    height: 100vh;
-    font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
-    gap: 1px;
-  }
-  #flag {
-    font-size: 15px;
-    line-height: 1;
-    user-select: none;
-    opacity: 0;
-    transition: opacity 0.3s;
-  }
-  #region {
-    font-size: 7px;
-    line-height: 1.1;
-    color: #ffffff;
-    text-shadow: 0 0 2px #000, 0 1px 2px #000;
-    text-align: center;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 100%;
-    opacity: 0;
-    transition: opacity 0.3s;
-    user-select: none;
-    padding: 0 2px;
-  }
+  #w.on { opacity: 1; transform: none }
+  #w.pop { animation: pop .45s cubic-bezier(.3, 1.6, .5, 1) }
+  @keyframes pop { 0% { transform: scale(.7) } 100% { transform: none } }
+
+  #f { font-size: 17px; line-height: 1; filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .45)) }
+  #f img { display: block; width: 17px; height: auto; border-radius: 2px; box-shadow: 0 0 0 1px rgba(255, 255, 255, .28) }
+
+  #r { max-width: 100%; color: #f1f5f9; letter-spacing: .02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums }
+  #r.in { animation: in .25s ease }
+  @keyframes in { from { opacity: 0; transform: translateY(2px) } to { opacity: 1; transform: none } }
+
+  #d { position: absolute; top: 3px; right: 3px; width: 4px; height: 4px; border-radius: 50%; background: #4ade80; box-shadow: 0 0 0 1px rgba(15, 23, 42, .8); transition: background .2s }
+  #d.off { background: #f87171 }
+  #w.offline #f { filter: grayscale(1) opacity(.6) }
+
+  @media (prefers-reduced-motion: reduce) { #w, #r.in, #w.pop { transition: none; animation: none } }
 </style>
 </head>
 <body>
-  <span id="flag"></span>
-  <span id="region"></span>
+<div id="w" role="img"><span id="f"></span><span id="r"></span><i id="d"></i></div>
 
 <script>
-(function() {
-  var flagEl = document.getElementById('flag');
-  var regionEl = document.getElementById('region');
+(() => {
+  'use strict';
+  const $ = id => document.getElementById(id);
+  const box = $('w'), flagEl = $('f'), textEl = $('r'), dot = $('d');
 
-  var regionText = '';
-  var timeZone = 'UTC';   
-  var showingTime = false;
-  var timerId = null;
+  const KEY = 'flagw2', GEO_TTL = 7 * 864e5, POLL = 15e3, TIMEOUT = 4e3;
+  const WIN = /Windows/.test(navigator.userAgent);         
 
-  function codeToFlag(code) {
-    if (!code || code.length !== 2) return '';
-    code = code.toUpperCase();
-    var base = 0x1F1E6;
-    return String.fromCodePoint(
-      base + (code.charCodeAt(0) - 65),
-      base + (code.charCodeAt(1) - 65)
-    );
+  const GEO = [
+    ip => ['https://ipapi.co/' + (ip ? ip + '/' : '') + 'json/',
+           d => ({ c: d.country_code, r: d.region || d.city, z: d.timezone, ip: d.ip })],
+    ip => ['https://ipwho.is/' + ip,
+           d => ({ c: d.country_code, r: d.region || d.city, z: d.timezone && d.timezone.id, ip: d.ip })],
+    ip => ['https://get.geojs.io/v1/ip/geo' + (ip ? '/' + ip : '') + '.json',
+           d => ({ c: d.country_code, r: d.region || d.city, z: d.timezone, ip: d.ip })]
+  ];
+  const bad = [0, 0, 0];                                    
+
+  let db = { last: '', geo: {} };
+  try { const s = JSON.parse(localStorage.getItem(KEY)); if (s && s.geo) db = s } catch (e) {}
+  const save = () => {
+    const keys = Object.keys(db.geo);
+    if (keys.length > 8) keys.sort((a, b) => db.geo[a].ts - db.geo[b].ts).slice(0, keys.length - 8).forEach(k => delete db.geo[k]);
+    try { localStorage.setItem(KEY, JSON.stringify(db)) } catch (e) {}
+  };
+
+  async function getJson(url) {
+    const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), TIMEOUT);
+    try {
+      const res = await fetch(url, { signal: ctl.signal, referrerPolicy: 'no-referrer', cache: 'no-store' });
+      if (!res.ok) throw 0;
+      return await res.json();
+    } finally { clearTimeout(t) }
   }
 
-  function getTime() {
-    try {
-      var fmt = new Intl.DateTimeFormat('ru-RU', {
-        timeZone: timeZone,
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: false
-      });
-      return fmt.format(new Date());
-    } catch (e) {
-      
-      var d = new Date();
-      var h = String(d.getHours()).padStart(2, '0');
-      var m = String(d.getMinutes()).padStart(2, '0');
-      return h + ':' + m;
+  async function getIp() {
+    try { const d = await getJson('https://api64.ipify.org?format=json'); return d && d.ip || '' } catch (e) { return '' }
+  }
+
+  async function lookup(ip) {
+    const hit = ip && db.geo[ip];
+    if (hit && Date.now() - hit.ts < GEO_TTL) return hit;
+    if (bad.every(t => Date.now() - t < 3e5)) bad.fill(0);
+    for (let i = 0; i < GEO.length; i++) {
+      if (Date.now() - bad[i] < 3e5) continue;              
+      try {
+        const [url, map] = GEO[i](ip);
+        const v = map(await getJson(url));
+        if (!/^[A-Za-z]{2}$/.test(v.c || '')) throw 0;     
+        v.ip = ip || v.ip || ''; v.ts = Date.now();
+        return v;
+      } catch (e) { bad[i] = Date.now() }
     }
   }
 
-  function render() {
-    regionEl.textContent = showingTime ? getTime() : regionText;
+  let cur = null, fmt = null, place = '', phase = false, n = 0, offline = !navigator.onLine, timer = null;
+  const names = (() => { try { return new Intl.DisplayNames(['ru'], { type: 'region' }) } catch (e) { return null } })();
+
+  function setFlag(code) {
+    code = code.toUpperCase();
+    if (WIN) {
+      const l = code.toLowerCase(), i = new Image(17, 13);
+      i.alt = code; i.decoding = 'async';
+      i.src = 'https://s01.flagcounter.com/images/flags_128x128/' + l + '.png';
+      i.onerror = () => { flagEl.textContent = code };
+      flagEl.replaceChildren(i);
+    } else {
+      flagEl.textContent = String.fromCodePoint(...[...code].map(ch => 0x1F1A5 + ch.charCodeAt(0)));
+    }
   }
 
-  function startToggle() {
-    if (timerId) clearInterval(timerId);
-    timerId = setInterval(function() {
-      showingTime = !showingTime;
-      render();
-    }, 5000);
+  const makeFmt = z => {
+    const o = { hour: '2-digit', minute: '2-digit', hour12: false };
+    try { return new Intl.DateTimeFormat('ru-RU', { ...o, timeZone: z || undefined }) } catch (e) { return new Intl.DateTimeFormat('ru-RU', o) }
+  };
+
+  function draw() {
+    if (!cur) return;
+    const t = offline ? 'нет сети' : (phase || !place ? fmt.format() : place);
+    if (textEl.textContent === t) return;
+    textEl.textContent = t;
+    textEl.classList.remove('in'); void textEl.offsetWidth; textEl.classList.add('in');
   }
 
-  function show(code, region, tz) {
-    var f = codeToFlag(code);
-    if (!f) return;
-
-    flagEl.textContent = f;
-    flagEl.style.opacity = '1';
-
-    regionText = region || '';
-    timeZone = tz || 'UTC';
-
-    showingTime = false;
-    render();
-    regionEl.style.opacity = '1';
-
-    startToggle();
+  function label() {
+    const country = names ? names.of(cur.c.toUpperCase()) : cur.c.toUpperCase();
+    const full = [country, cur.r, fmt.format()].filter(Boolean).join(', ');
+    box.setAttribute('aria-label', full); box.title = full;
   }
 
-  fetch('https://ipapi.co/json/')
-    .then(function(r) {
-      if (!r.ok) throw new Error('fail');
-      return r.json();
-    })
-    .then(function(d) {
-      var reg = d.region || d.city || '';
-      show(d.country_code, reg, d.timezone);
-    })
-    .catch(function() {
-      fetch('https://ipwho.is/')
-        .then(function(r) { return r.json(); })
-        .then(function(d) {
-          var reg = d.region || d.city || '';
-          show(d.country_code, reg, d.timezone && d.timezone.id);
-        })
-        .catch(function() {});
-    });
+  function paint(g, animate) {
+    cur = g; fmt = makeFmt(g.z);
+    place = (g.r || '').replace(/\s+(Oblast|Region|Krai|Province|Prefecture|County)$/i, '') || (names ? names.of(g.c.toUpperCase()) : '');  
+    phase = false; n = 0;
+    setFlag(g.c); label(); draw();
+    box.classList.add('on');
+    if (animate) { box.classList.remove('pop'); void box.offsetWidth; box.classList.add('pop') }
+  }
+
+  function setNet(on) {
+    if (offline === !on) return;
+    offline = !on;
+    dot.classList.toggle('off', offline);
+    box.classList.toggle('offline', offline);
+    draw();
+  }
+
+  function tick() { n++; if (n % 4 === 0 && place) phase = !phase; draw() }
+  function run() { if (!timer && !document.hidden) timer = setInterval(tick, 1000) }
+  function stop() { clearInterval(timer); timer = null }
+
+  
+  let busy = false, again = false;
+  async function check(src) {
+    if (busy) { again = true; return }
+    busy = true;
+    try {
+      if (!navigator.onLine) { setNet(false); return }
+      const ip = await getIp();
+      if (!ip && src === 'poll') return;                    
+      if (ip && cur && cur.ip === ip) { setNet(true); return }
+      const g = await lookup(ip);
+      if (!g) return;
+      setNet(true);
+      db.geo[g.ip || '_'] = g; db.last = g.ip || '_'; save();
+      const moved = !cur || cur.c !== g.c || cur.r !== g.r || cur.z !== g.z;
+      if (moved) paint(g, !!cur); else cur = g;            
+    } catch (e) {} finally {
+      busy = false;
+      if (again) { again = false; check('event') }
+    }
+  }
+
+  addEventListener('online', () => { setNet(true); check('event') });
+  addEventListener('offline', () => setNet(false));
+  addEventListener('focus', () => check('event'));
+  addEventListener('pageshow', () => check('event'));
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) stop(); else { run(); draw(); check('event') }
+  });
+  const conn = navigator.connection;
+  if (conn && conn.addEventListener) conn.addEventListener('change', () => check('event'));
+  setInterval(() => { if (!document.hidden) check('poll') }, POLL);
+
+  dot.classList.toggle('off', offline); box.classList.toggle('offline', offline);
+  const last = db.geo[db.last];
+  if (last && last.c) paint(last, false);
+  run();
+  check('init');
 })();
 </script>
 </body>
