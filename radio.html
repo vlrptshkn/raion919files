@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Радио — Район 919</title>
+<link rel="icon" type="image/png" href="/favicon.png">
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:14px;background:radial-gradient(ellipse at 50% 30%,#2b1d12,#0d0805 75%);font-family:Georgia,'Times New Roman',serif;color:#e8d5a8;cursor:url('/cursor.png'),auto}
+.radio{width:100%;max-width:940px;padding:18px 18px 22px;border-radius:26px;position:relative;
+background:repeating-linear-gradient(90deg,rgba(0,0,0,.09) 0 2px,transparent 2px 9px),repeating-linear-gradient(88deg,rgba(255,220,160,.05) 0 1px,transparent 1px 23px),linear-gradient(#7a4a22,#4a2a12 60%,#35200f);
+box-shadow:inset 0 3px 6px rgba(255,210,150,.25),inset 0 -8px 14px rgba(0,0,0,.5),0 25px 50px rgba(0,0,0,.8),0 0 0 3px #1d1108}
+.radio.shake{animation:sh .09s linear 14}
+@keyframes sh{25%{transform:translate(-3px,2px) rotate(-.3deg)}75%{transform:translate(3px,-2px) rotate(.3deg)}}
+.top{display:flex;justify-content:space-between;align-items:center;margin:0 6px 12px}
+.plate{background:linear-gradient(#d9b45c,#8a6a22);color:#2a1a05;padding:4px 16px;border-radius:4px;font-weight:700;letter-spacing:.12em;font-size:.85em;box-shadow:inset 0 1px 1px #fff8,0 1px 3px #000;cursor:pointer;user-select:none}
+.lamp{width:16px;height:16px;border-radius:50%;background:#3a1a05;box-shadow:inset 0 2px 3px #000;transition:.5s}
+.on .lamp{background:#ff9a2e;box-shadow:0 0 14px 4px #ff8a1e,inset 0 -2px 4px #c25a00}
+.body{display:flex;gap:16px;flex-wrap:wrap}
+.spk{flex:1 1 230px;min-height:230px;border-radius:14px;border:6px solid #2a170a;cursor:pointer;
+background:radial-gradient(circle,rgba(0,0,0,.65) 1.2px,transparent 1.6px) 0 0/7px 7px,linear-gradient(135deg,#a98c5a,#7c6236 60%,#5d4723);
+box-shadow:inset 0 0 25px #000a,0 1px 0 #fff3}
+.panel{flex:2.4 1 400px;display:flex;flex-direction:column;gap:14px}
+.glass{position:relative;border-radius:12px;border:6px solid #1c1007;background:#120b04;box-shadow:inset 0 0 18px #000,0 1px 0 #fff3;overflow:hidden}
+canvas#dial{display:block;width:100%;height:150px;touch-action:none}
+.glass::after{content:'';position:absolute;inset:0;pointer-events:none;background:linear-gradient(160deg,rgba(255,255,255,.14),transparent 38%)}
+.disp{display:flex;justify-content:space-between;gap:8px;padding:6px 12px;background:#0b0704;font-family:'Courier New',monospace;color:#ffb347;text-shadow:0 0 8px #ff8a1e;font-size:.95em;min-height:2.2em}
+.disp b{font-size:1.15em;white-space:nowrap}
+.disp span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:right}
+.off .disp{color:#4a3115;text-shadow:none}
+.ctl{display:flex;justify-content:space-around;align-items:center;gap:8px}
+.kw{text-align:center;font-size:.72em;letter-spacing:.14em;color:#d9b45c}
+.knob{width:86px;height:86px;border-radius:50%;margin:0 auto 6px;touch-action:none;cursor:grab;position:relative;
+background:radial-gradient(circle at 35% 30%,#f3e3b5,#9a7a35 45%,#3b2a0d);box-shadow:0 6px 10px #000c,inset 0 -4px 6px #0006,0 0 0 5px #24160a}
+.knob::before{content:'';position:absolute;inset:8px;border-radius:50%;background:repeating-conic-gradient(rgba(0,0,0,.18) 0 5deg,transparent 5deg 10deg)}
+.knob i{position:absolute;left:50%;top:6px;width:5px;height:24px;margin-left:-2.5px;background:#2a1a05;border-radius:3px}
+canvas#eye{width:80px;height:80px;border-radius:50%;box-shadow:0 0 0 5px #24160a,inset 0 0 10px #000}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:center}
+button{font:inherit;cursor:pointer;color:#f3e3b5;border:none;border-radius:6px;padding:9px 12px;min-width:44px;min-height:40px;background:linear-gradient(#5a3a1a,#2e1b0a);box-shadow:0 3px 0 #140a03,inset 0 1px 0 #fff3}
+button:active{transform:translateY(2px);box-shadow:0 1px 0 #140a03}
+#pw{background:linear-gradient(#a02a1a,#5c1208);font-weight:700}
+.on #pw{background:linear-gradient(#3a9a3a,#15501a)}
+.hint{text-align:center;font-size:.75em;color:#b69a66;margin-top:10px}
+@media (max-width:520px){.knob{width:72px;height:72px}canvas#eye{width:64px;height:64px}}
+@media (prefers-reduced-motion:reduce){.radio.shake{animation:none}}
+</style>
+<link rel="preconnect" href="https://hls-01-gpm.hostingradio.ru" crossorigin>
+<link rel="preconnect" href="https://hls-02-europaplus.emgsound.ru" crossorigin>
+<link rel="preconnect" href="https://hls-01-hitfm.hostingradio.ru" crossorigin>
+<link rel="preconnect" href="https://hls-01-rusradio.hostingradio.ru" crossorigin>
+<link rel="preconnect" href="https://hls-01-radiorecord.hostingradio.ru" crossorigin>
+<link rel="preconnect" href="https://stream.newradio.ru" crossorigin>
+<link rel="preconnect" href="https://stream3.radiogoose.ru" crossorigin>
+<link rel="preconnect" href="https://hls-01-dfm.hostingradio.ru" crossorigin>
+<link rel="preconnect" href="https://online.guberniya.tv" crossorigin>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/hls.js/1.5.13/hls.min.js"></script>
+</head>
+<body>
+<div class="radio off" id="radio">
+  <div class="top"><span class="plate" id="plate">МЕЛОДИЯ</span><i class="lamp"></i></div>
+  <div class="body">
+    <div class="spk" id="spk" title="Динамик"></div>
+    <div class="panel">
+      <div class="glass">
+        <canvas id="dial"></canvas>
+        <div class="disp"><b id="fq">--.-</b><span id="dt">ВЫКЛЮЧЕНО</span></div>
+      </div>
+      <div class="ctl">
+        <div class="kw"><div class="knob" id="kt"><i></i></div>НАСТРОЙКА</div>
+        <canvas id="eye" width="160" height="160"></canvas>
+        <div class="kw"><div class="knob" id="kv"><i></i></div>ГРОМКОСТЬ</div>
+      </div>
+      <div class="row"><button id="pw">ВКЛ / ВЫКЛ</button><button id="dn">◄ 0.1</button><button id="up">0.1 ►</button></div>
+    </div>
+  </div>
+  <div class="hint">Крути ручку настройки (тяни пальцем или мышью), колесо мыши и стрелки ← → тоже работают. Прислушивайся к эфиру.</div>
+</div>
+<script>
+const B='https://raw.githubusercontent.com/vlrptshkn/raion919files/main/';
+const S=[
+{f:88.4,n:'Гусь-Хардкор FM',s:'ГУСЬ',u:'https://stream3.radiogoose.ru/listen/hardcore/play'},
+{f:90.3,n:'DFM',s:'DFM',u:'https://hls-01-dfm.hostingradio.ru/dfm/playlist.m3u8'},
+{f:91.9,n:'919 FM',s:'919 FM',petya:1},
+{f:93.5,n:'Гоп-Стоп ФМ',s:'ГОП-СТОП',u:'https://hls-01-radiorecord.hostingradio.ru/record-gop/112/playlist.m3u8',h:1},
+{f:95.6,n:'Новое Радио',s:'НОВОЕ',u:'https://stream.newradio.ru/novoe96.aacp'},
+{f:97.4,n:'Русское Радио',s:'РУССКОЕ',u:'https://hls-01-rusradio.hostingradio.ru/rusradio/96/playlist.m3u8',h:1},
+{f:99.3,n:'Like FM',s:'LIKE',u:'https://hls-01-gpm.hostingradio.ru/likefm495/128/playlist.m3u8',h:1},
+{f:101.2,n:'ХИТ FM',s:'ХИТ',u:'https://hls-01-hitfm.hostingradio.ru/hitfm/96/playlist.m3u8',h:1},
+{f:103.4,n:'NRG',s:'NRG',u:'https://hls-01-gpm.hostingradio.ru/energyfm495/playlist.m3u8',h:1},
+{f:105.6,n:'Европа Плюс',s:'ЕВРОПА+',u:'https://hls-02-europaplus.emgsound.ru/11/playlist.m3u8',h:1},
+{f:107.4,n:'32 Радио Брянск',s:'32 БРЯНСК',u:'https://online.guberniya.tv:8443/32radio'}];
+const T=['7c1c19b6afe5503','All You Ever Wanted','Biserka','Captain Jeff - Ай ай ай','Captain-Jeff_-_Terminator_lyubvi_76592886','Captain_Jeff_-_Pervyj_Uroven_Netlight_Remix_(SkySound.cc)','Cash Machine - Oliver Tree','EnjoytheRide','I Kiss Your Lips','NARKOTYKI — DR. VODKA ','Noise_MC_-_Roboty_68089672','Noize MC - Выход в Город','Oliver Tree - Elevator To The Sky','Oliver Tree - Flowers','PALERMO','Paula_Toledo_-_How_Long_Bootleg_HLWIT_Speed','PumpedUp','Sky_-_Malchik_ishhet_mamu_16752','Violet_Time_-_Navsegda_(Zvyki.com)','alienboy','angel','b828cf36f335c093e3174b029a81b746','chuvak','computergirl','ddj','discoliesrmx','etr','fou','glowon','golovy','heartbass','humanafterall','icantwait','icbto','igil','intoxicated','introvert','iwd','jeffparallelmir','krrrr','krsilno','lalala','lavenderhaze','leavemealone','les','madness','mns','myonlyfriend','ol','patience','pesniadliaradio','play','podrugarmx','prikwater','rdg','rumperlstiltzchen','sadgirls','solnce','soyuz','stay','superhero','sweetlovin','sxtm','technologic','tnvs','tuda','voda','vs','whatyouneed','withyou','wsfs','zvs','Валентин Стрыкало - Кайен','Снежно (S`NEЖNO) - Не Стреляй В Моё Сердце','челябинск','alright','Про улицу и район','WE ALL ARE','Михаил Круг - Владимирский Централ','964_Veifum','474_Akvalazy_-_Koldunya_original_74423621','858_Joost - Wtffff _P ','314_ПОМИН ЧУДЕС + eminem2 [youngslashprod im1ky hertha]'];
+const $=i=>document.getElementById(i),R=$('radio');
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+let on=false,freq=99.8,vol=.6,needle=freq,lamp=0,sig=0,best=null,msgT='',msgU=0;
+const pe=new Audio(),ge=new Audio();
+function msg(t,ms){msgT=t;msgU=Date.now()+ms}
+
+let ord=T.map((_,i)=>i),pi=0,perr=0;
+for(let i=ord.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[ord[i],ord[j]]=[ord[j],ord[i]]}
+function pLoad(){pe.src=B+encodeURIComponent(T[ord[pi]]+'.mp3');pe.play().catch(()=>{})}
+function pNext(){pi=(pi+1)%ord.length;pLoad()}
+pe.muted=true;pe.addEventListener('ended',()=>{perr=0;pNext()});pe.addEventListener('error',()=>{if(++perr<15)pNext()});pLoad();
+addEventListener('pointerdown',()=>playAll());
+
+let ctx,ng,wg,osc,bg;
+function initAudio(){if(ctx)return;ctx=new(window.AudioContext||window.webkitAudioContext)();
+const n=ctx.sampleRate*2,b=ctx.createBuffer(1,n,ctx.sampleRate),d=b.getChannelData(0);
+for(let i=0;i<n;i++)d[i]=(Math.random()*2-1)*(Math.random()<.002?3:1);
+const s=ctx.createBufferSource();s.buffer=b;s.loop=true;const lp=ctx.createBiquadFilter();lp.type='lowpass';lp.frequency.value=5000;
+ng=ctx.createGain();ng.gain.value=0;s.connect(lp);lp.connect(ng);ng.connect(ctx.destination);s.start();
+osc=ctx.createOscillator();wg=ctx.createGain();wg.gain.value=0;osc.connect(wg);wg.connect(ctx.destination);osc.start();
+bg=ctx.createGain();bg.gain.value=0;bg.connect(ctx.destination)}
+
+S.forEach(s=>{if(s.petya)s.el=pe});
+function boot(s){const a=new Audio();a.muted=true;a.volume=0;s.el=a;
+const retry=()=>{if(best===s)msg('НЕТ СИГНАЛА: '+s.n,3500);setTimeout(()=>{if(s.hls)s.hls.startLoad();else{a.src=s.u;a.play().catch(()=>{})}},8000)};
+if(s.h&&window.Hls&&Hls.isSupported()){const h=new Hls({startLevel:0,maxBufferLength:10,maxMaxBufferLength:20,backBufferLength:0,liveSyncDurationCount:2,manifestLoadingTimeOut:8000,manifestLoadingMaxRetry:2,fragLoadingTimeOut:12000});
+s.hls=h;h.loadSource(s.u);h.attachMedia(a);
+h.on(Hls.Events.MANIFEST_PARSED,()=>a.play().catch(()=>{}));
+h.on(Hls.Events.ERROR,(e,d)=>{if(d.fatal){if(d.type===Hls.ErrorTypes.MEDIA_ERROR)h.recoverMediaError();else retry()}})}
+else{a.src=s.u;a.play().catch(()=>{});a.addEventListener('error',retry)}}
+function playAll(){S.forEach(s=>{if(s.el&&s.el.paused)s.el.play().catch(()=>{})})}
+addEventListener('DOMContentLoaded',()=>S.forEach(s=>{if(!s.petya)boot(s)}));
+
+function mix(){let b=null,bs=0;
+for(const s of S){const d=Math.abs(freq-s.f);if(d<.5){const k=1-Math.pow(d/.5,1.6);if(k>bs){bs=k;b=s}}}
+best=b;sig=bs;
+for(const x of S){const a=x.el;if(!a)continue;const act=on&&x===b&&bs>.15;a.volume=act?clamp(vol*Math.min(1,bs*1.5)*(a===pe&&Date.now()<duckU?.3:1),0,1):0;a.muted=!act}
+if(ctx){const t=ctx.currentTime;
+ng.gain.setTargetAtTime(on?vol*.2*Math.pow(1-bs,1.5)+(b?0:vol*.02):0,t,.05);
+const wh=on&&b&&bs>.03&&bs<.6;
+if(wh)osc.frequency.setTargetAtTime(200+Math.abs(freq-b.f)*4000,t,.05);
+wg.gain.setTargetAtTime(wh?vol*.03*(1-bs):0,t,.05);
+if(bg)bg.gain.setTargetAtTime(on&&b&&b.petya&&bs>.15?vol*Math.min(1,bs*1.4)*.5:0,t,.03)}}
+
+let duckU=0,lastBeep='';
+function beepHour(n){if(!ctx||!bg)return;const t0=ctx.currentTime+.1;
+for(let i=0;i<n;i++){const o=ctx.createOscillator(),g=ctx.createGain(),t=t0+i*.6;
+o.type='sine';o.frequency.value=1000;g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(1,t+.01);
+g.gain.setValueAtTime(1,t+.18);g.gain.linearRampToValueAtTime(0,t+.22);
+o.connect(g);g.connect(bg);o.start(t);o.stop(t+.25)}
+duckU=Date.now()+n*600+400}
+setInterval(()=>{const m=new Date(new Date().toLocaleString('en-US',{timeZone:'Europe/Moscow'}));
+const k=m.getFullYear()+'-'+m.getMonth()+'-'+m.getDate()+'-'+m.getHours();
+if(m.getMinutes()===0&&m.getSeconds()<3&&lastBeep!==k){lastBeep=k;beepHour(m.getHours()%12||12)}},500);
+
+function gnome(){if(!on)return;ge.src=B+(1+Math.floor(Math.random()*8))+'.mp3';
+const r=.6+Math.random()*1.5;ge.defaultPlaybackRate=r;ge.playbackRate=r;ge.volume=clamp(.4+Math.random()*.5,0,1);
+ge.play().catch(()=>{});R.classList.add('shake');msg('Ǝ ГНОМ ǝ',2500);setTimeout(()=>R.classList.remove('shake'),1300)}
+(function sch(){setTimeout(()=>{gnome();sch()},120000+Math.random()*180000)})();
+
+function setF(v){freq=clamp(v,87.5,108);if(freq<=87.5)msg('Гном дышит тебе в затылок...',2500);if(freq>=108)msg('Ку-ку. Дальше только Красная площадь.',2500)}
+function power(){on=!on;R.classList.toggle('on',on);R.classList.toggle('off',!on);
+if(on){initAudio();ctx.resume();playAll()}}
+$('pw').onclick=power;$('dn').onclick=()=>setF(freq-.1);$('up').onclick=()=>setF(freq+.1);
+addEventListener('keydown',e=>{if(e.key==='ArrowLeft')setF(freq-.1);if(e.key==='ArrowRight')setF(freq+.1)});
+function knob(el,fn){let lx,ly,d=0;el.addEventListener('pointerdown',e=>{d=1;lx=e.clientX;ly=e.clientY;el.setPointerCapture(e.pointerId)});
+el.addEventListener('pointermove',e=>{if(!d)return;fn((e.clientX-lx)-(e.clientY-ly));lx=e.clientX;ly=e.clientY});
+el.addEventListener('pointerup',()=>d=0);el.addEventListener('pointercancel',()=>d=0)}
+knob($('kt'),dx=>setF(freq+dx*.03));knob($('kv'),dx=>{vol=clamp(vol+dx*.01,0,1)});
+$('kt').addEventListener('wheel',e=>{e.preventDefault();setF(freq+(e.deltaY<0?.1:-.1))},{passive:false});
+$('kv').addEventListener('wheel',e=>{e.preventDefault();vol=clamp(vol+(e.deltaY<0?.05:-.05),0,1)},{passive:false});
+const dl=$('dial'),dc=dl.getContext('2d'),P=24;
+function fromX(e){const r=dl.getBoundingClientRect();setF(87.5+(e.clientX-r.left-P)/(r.width-2*P)*20.5)}
+let dd=0;dl.addEventListener('pointerdown',e=>{dd=1;dl.setPointerCapture(e.pointerId);fromX(e)});
+dl.addEventListener('pointermove',e=>{if(dd)fromX(e)});dl.addEventListener('pointerup',()=>dd=0);
+
+let gc=0;$('spk').onclick=()=>{if(++gc>=5){gc=0;if(on)gnome();else msg('Включи меня, смертный',2000)}};
+$('plate').ondblclick=()=>msg('Выпущено в Районе 919. ОТК: Зинаида (штраф за брак)',4000);
+console.log('%cГНОМ СЛУШАЕТ ТВОЙ ЭФИР. Попробуй 91.9','color:#ff8a1e;font-size:16px');
+
+const ec=$('eye').getContext('2d');
+function draw(){
+lamp+=((on?1:0)-lamp)*.03;needle+=(freq-needle)*.18;mix();
+const dpr=devicePixelRatio||1,W=dl.clientWidth,H=dl.clientHeight;
+if(dl.width!==Math.round(W*dpr)){dl.width=Math.round(W*dpr);dl.height=Math.round(H*dpr)}
+dc.setTransform(dpr,0,0,dpr,0,0);
+const fl=on?1+Math.sin(Date.now()/90)*.02*Math.random():1,a=lamp*fl;
+const g=dc.createLinearGradient(0,0,0,H);g.addColorStop(0,`rgba(${60+170*a|0},${40+120*a|0},${10+30*a|0},1)`);g.addColorStop(1,`rgba(${30+120*a|0},${20+70*a|0},5,1)`);
+dc.fillStyle=g;dc.fillRect(0,0,W,H);
+dc.strokeStyle=`rgba(40,20,0,.85)`;dc.fillStyle='rgba(40,20,0,.9)';dc.font='11px Georgia';dc.textAlign='center';
+for(let f=87.5;f<=108.01;f+=.5){const x=P+(f-87.5)/20.5*(W-2*P),mj=Math.abs(f%1)<.01||Math.abs(f%1-1)<.01;
+dc.lineWidth=mj?1.6:1;dc.beginPath();dc.moveTo(x,H-34);dc.lineTo(x,H-(mj?52:44));dc.stroke();
+if(mj&&Math.round(f)%2===0)dc.fillText(Math.round(f),x,H-14)}
+if(best&&on&&sig>.2){const x=P+(best.f-87.5)/20.5*(W-2*P);
+dc.save();dc.globalAlpha=clamp((sig-.2)/.5,0,1);dc.font='bold 10px Georgia';dc.translate(x,H-58);dc.rotate(-Math.PI/2);dc.textAlign='left';dc.fillText(best.s,0,3);dc.restore()}
+dc.textAlign='left';dc.font='italic 11px Georgia';dc.fillText('УКВ · МГц',8,16);
+const nx=P+(needle-87.5)/20.5*(W-2*P);
+dc.shadowColor='#f00';dc.shadowBlur=on?10:0;dc.strokeStyle='#d01010';dc.lineWidth=2.5;dc.beginPath();dc.moveTo(nx,0);dc.lineTo(nx,H);dc.stroke();dc.shadowBlur=0;
+
+ec.clearRect(0,0,160,160);
+const eg=ec.createRadialGradient(80,80,10,80,80,76);eg.addColorStop(0,`rgba(130,255,150,${.15+.8*lamp})`);eg.addColorStop(1,`rgba(10,70,25,${.9})`);
+ec.fillStyle=eg;ec.beginPath();ec.arc(80,80,74,0,7);ec.fill();
+const w=on?(1-sig)*1.8+.05:0;ec.fillStyle='#021208';ec.beginPath();ec.moveTo(80,80);ec.arc(80,80,74,-Math.PI/2-w/2,-Math.PI/2+w/2);ec.fill();
+ec.strokeStyle='#0a2a12';ec.lineWidth=4;ec.beginPath();ec.arc(80,80,74,0,7);ec.stroke();
+
+$('kt').style.transform=`rotate(${(freq-87.5)/20.5*300-150}deg)`;$('kv').style.transform=`rotate(${vol*300-150}deg)`;
+$('fq').textContent=on?freq.toFixed(1)+' МГц':'--.-';
+let t;if(!on)t='ВЫКЛЮЧЕНО';else if(Date.now()<msgU)t=msgT;
+else if(best)t=best.n+((best.el&&best.el.readyState<3)?' · загрузка...':(sig<.5?' · слабый сигнал':''));
+else t='эфир · шум...';
+$('dt').textContent=t;requestAnimationFrame(draw)}
+draw();
+</script>
+</body>
+</html>
